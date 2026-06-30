@@ -1,0 +1,28 @@
+# API keys and secrets — NEVER commit
+.env
+*.env
+.env.*
+
+# Python virtual environment
+venv/
+.venv/
+env/
+
+# VS Code local history plugin
+.history/
+
+# Qodo / AI assistant caches
+.qodo/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# OS files
+.DS_Store
+Thumbs.db
