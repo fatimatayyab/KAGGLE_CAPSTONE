@@ -1,0 +1,13 @@
+{
+  "query": "What is the vibe on AAPL right now?",
+  "session_id": "finvibe-secure-session",
+  "turn": 1,
+  "timestamp": "2026-06-30T14:02:22Z",
+  "guardrail_triggered": false,
+  "summary": {
+    "price_snapshot": "AAPL closed at $281.74, trading below its 5-day MA of $285.61, signalling bearish short-term momentum.",
+    "market_sentiment": "Neutral: headlines covered mixed topics — AI infrastructure investment and UK regulatory proposals — without a clear directional lean.",
+    "analyst_take": "Price action below MA5 combined with neutral news sentiment suggests a cautious near-term outlook for AAPL with no strong directional signal at this time.",
+    "raw_text": ""
+  }
+}

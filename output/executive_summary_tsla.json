@@ -1,0 +1,13 @@
+{
+  "query": "How does that compare to TSLA?",
+  "session_id": "finvibe-secure-session",
+  "turn": 2,
+  "timestamp": "2026-06-30T14:03:17Z",
+  "guardrail_triggered": false,
+  "summary": {
+    "price_snapshot": "TSLA closed below its 5-day MA, reflecting continued downward price pressure and bearish short-term momentum.",
+    "market_sentiment": "Bearish: the 'Magnificent 7' decline headline weighed on sentiment, positioning TSLA alongside broader big-tech weakness.",
+    "analyst_take": "Both AAPL and TSLA show sub-MA5 price action and weak-to-neutral sentiment — the comparison reveals a sector-wide bearish tilt rather than TSLA-specific weakness.",
+    "raw_text": ""
+  }
+}
