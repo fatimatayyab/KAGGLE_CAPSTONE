@@ -13,7 +13,7 @@ _PROMPT = (
     Path(__file__).parent.parent / "prompts" / "supervisor_prompt.txt"
 ).read_text(encoding="utf-8").strip()
 
-MODEL = "gemini-2.0-flash"
+MODEL = "gemini-2.5-flash"
 
 supervisor_agent = Agent(
     name="supervisor_agent",

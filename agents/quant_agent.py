@@ -11,7 +11,7 @@ _PROMPT = (
     Path(__file__).parent.parent / "prompts" / "quant_prompt.txt"
 ).read_text(encoding="utf-8").strip()
 
-MODEL = "gemini-2.0-flash"
+MODEL = "gemini-2.5-flash"
 
 quant_agent = Agent(
     name="quant_agent",

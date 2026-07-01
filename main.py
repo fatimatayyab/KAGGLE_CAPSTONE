@@ -1,4 +1,4 @@
-"""FinVibe: Multi-Agent Market Analyst — Standalone CLI
+"""FinVibe: Multi-Agent Market Analyst - Standalone CLI
 
 Usage:
     python main.py
@@ -20,21 +20,21 @@ if not os.environ.get("GOOGLE_API_KEY"):
 from memory import SessionMemory
 from orchestration import _run_with_retry
 
-_MODEL = "gemini-2.0-flash"
+_MODEL = "gemini-2.5-flash"
 
 
 async def main() -> None:
     memory = SessionMemory()
 
-    print(f"\n{'━' * 62}")
+    print(f"\n{'=' * 62}")
     print("  FinVibe  |  Multi-Agent Market Analyst")
-    print(f"{'━' * 62}")
+    print(f"{'=' * 62}")
     print(f"  Model   : {_MODEL}")
-    print(f"  Agents  : supervisor_agent → quant_agent + sentiment_agent")
-    print(f"  Tools   : get_stock_data  ·  get_stock_news  (via MCP)")
-    print(f"{'━' * 62}")
+    print(f"  Agents  : supervisor_agent -> quant_agent + sentiment_agent")
+    print(f"  Tools   : get_stock_data  .  get_stock_news  (via MCP)")
+    print(f"{'=' * 62}")
     print("  Ask any market question. Type 'quit' to exit.")
-    print(f"{'━' * 62}\n")
+    print(f"{'=' * 62}\n")
 
     while True:
         try:

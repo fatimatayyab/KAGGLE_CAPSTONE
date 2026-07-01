@@ -14,6 +14,7 @@ _stream_pipeline(session_id, user_id, query, state_delta)
 """
 from __future__ import annotations
 
+import re
 import time
 from typing import Any
 
@@ -23,16 +24,32 @@ from memory.session_memory import SessionMemory
 from orchestration.runner import runner
 from security.guardrails import check_input, GUARDRAIL_MESSAGE
 
-# ── Session constants ──────────────────────────────────────────────────────────
+# -- Session constants ----------------------------------------------------------
 _USER_ID    = "finvibe-user"
 _SESSION_ID = "finvibe-secure-session"
 
-# ── Retry configuration ────────────────────────────────────────────────────────
-_RETRY_WAIT  = 35   # seconds — matches Gemini free-tier retry window
-_MAX_RETRIES = 2
+# -- Retry configuration --------------------------------------------------------
+_MAX_RETRIES     = 4
+_DEFAULT_WAIT    = 65   # seconds - safely clears the 1-minute RPM window
+_MAX_WAIT        = 120  # cap for exponential backoff
 
 
-# ── Core event processor ───────────────────────────────────────────────────────
+def _retry_wait(err_str: str, attempt: int) -> int:
+    """Return seconds to wait before the next attempt.
+
+    Prefers the retryDelay the API embeds in 429 responses.
+    For 503 (server overload) uses a short fixed wait.
+    Falls back to exponential backoff capped at _MAX_WAIT.
+    """
+    match = re.search(r"retryDelay.*?(\d+)s", err_str)
+    if match:
+        return min(int(match.group(1)) + 5, _MAX_WAIT)
+    if "503" in err_str or "UNAVAILABLE" in err_str:
+        return 15
+    return min(_DEFAULT_WAIT * attempt, _MAX_WAIT)
+
+
+# -- Core event processor -------------------------------------------------------
 
 def _stream_pipeline(
     session_id: str,
@@ -78,7 +95,7 @@ def _stream_pipeline(
                 args_str = ", ".join(
                     f"{k}={v!r}" for k, v in (fc.args or {}).items()
                 )
-                print(f"  [{author}]  ▶ {fc.name}({args_str})")
+                print(f"  [{author}]  > {fc.name}({args_str})")
             continue
 
         frs = event.get_function_responses()
@@ -87,13 +104,13 @@ def _stream_pipeline(
                 raw     = fr.response or {}
                 payload = raw.get("result", raw) if isinstance(raw, dict) else raw
                 snippet = str(payload).replace("\n", " ")[:90]
-                print(f"  [tool:{fr.name}]  ◀ {snippet}…")
+                print(f"  [tool:{fr.name}]  < {snippet}...")
             continue
 
         if event.content and event.content.parts:
             text = "".join(p.text for p in event.content.parts if p.text).strip()
             if text:
-                snippet = text[:115] + ("…" if len(text) > 115 else "")
+                snippet = text[:115] + ("..." if len(text) > 115 else "")
                 print(f"  [{author}]  {snippet}")
 
         if event.is_final_response() and event.content and event.content.parts:
@@ -108,7 +125,7 @@ def _stream_pipeline(
     return supervisor_response or last_final_response
 
 
-# ── Guarded pipeline entry point ───────────────────────────────────────────────
+# -- Guarded pipeline entry point -----------------------------------------------
 
 def run_secure_market_pipeline(
     user_query: str,
@@ -117,11 +134,11 @@ def run_secure_market_pipeline(
     """Guardrail-protected, context-aware pipeline entry point.
 
     Execution contract:
-      1. Guardrail  — banned phrases intercepted before any API call is made.
-      2. Context    — last N memory entries injected via state_delta so the
+      1. Guardrail  - banned phrases intercepted before any API call is made.
+      2. Context    - last N memory entries injected via state_delta so the
                       supervisor retains cross-turn awareness.
-      3. Run        — delegates to _stream_pipeline(); no event logic duplicated.
-      4. Persist    — successful (query, response) pair appended to memory.
+      3. Run        - delegates to _stream_pipeline(); no event logic duplicated.
+      4. Persist    - successful (query, response) pair appended to memory.
 
     Args:
         user_query: Natural-language market analysis request.
@@ -131,37 +148,37 @@ def run_secure_market_pipeline(
         Supervisor's Executive Market Summary string, or None if the
         guardrail fired (zero Gemini API calls are made in that case).
     """
-    # 1. Guardrail check — fast path, zero API cost
+    # 1. Guardrail check - fast path, zero API cost
     warning = check_input(user_query)
     if warning:
-        print(f"\n{'═' * 62}")
+        print(f"\n{'=' * 62}")
         print("  FinVibe  |  Input Guardrail")
-        print(f"{'═' * 62}")
+        print(f"{'=' * 62}")
         print(f"  {GUARDRAIL_MESSAGE}")
-        print(f"{'═' * 62}\n")
+        print(f"{'=' * 62}\n")
         return None
 
     # 2. Build context payload
     state_delta = memory.state_delta()
 
-    print(f"\n{'═' * 62}")
+    print(f"\n{'=' * 62}")
     print("  FinVibe  |  Multi-Agent Market Analysis")
-    print(f"{'═' * 62}")
+    print(f"{'=' * 62}")
     print(f"  Query   : {user_query}")
     print(f"  Session : {_SESSION_ID}  (turn {memory.turn_count + 1})")
     if state_delta:
-        print(f"  Context : {len(state_delta['recent_history'])} prior message(s) injected")
-    print(f"{'─' * 62}")
+        print(f"  Context : {len(state_delta['recent_history']) // 2} prior turn(s) injected")
+    print(f"{'-' * 62}")
 
     # 3. Run pipeline
     final = _stream_pipeline(_SESSION_ID, _USER_ID, user_query, state_delta)
 
     # 4. Print summary
-    print(f"{'─' * 62}")
+    print(f"{'-' * 62}")
     print("  EXECUTIVE MARKET SUMMARY")
-    print(f"{'─' * 62}")
-    print(final or "[No final response captured — review event log above]")
-    print(f"{'═' * 62}\n")
+    print(f"{'-' * 62}")
+    print(final or "[No final response captured - review event log above]")
+    print(f"{'=' * 62}\n")
 
     # 5. Persist turn
     if final:
@@ -170,7 +187,7 @@ def run_secure_market_pipeline(
     return final
 
 
-# ── Retry wrapper ──────────────────────────────────────────────────────────────
+# -- Retry wrapper --------------------------------------------------------------
 
 def _run_with_retry(query: str, memory: SessionMemory) -> str | None:
     """Call run_secure_market_pipeline with automatic 429 backoff/retry.
@@ -179,6 +196,10 @@ def _run_with_retry(query: str, memory: SessionMemory) -> str | None:
       - Propagated exception: caught via try/except, checks for '429' in str(e).
       - Thread-swallowed exception: detected via empty string return from pipeline.
 
+    On each 429 the API response embeds a retryDelay — that value is parsed and
+    used directly (+5 s buffer) so waits are as short as possible.  Falls back
+    to exponential backoff capped at _MAX_WAIT when the delay can't be parsed.
+
     Args:
         query:  User query string.
         memory: Active SessionMemory instance for this session.
@@ -186,34 +207,48 @@ def _run_with_retry(query: str, memory: SessionMemory) -> str | None:
     Returns:
         Pipeline result, or None if guardrail fired or all retries failed.
     """
+    last_err = ""
     for attempt in range(1, _MAX_RETRIES + 1):
         try:
             result = run_secure_market_pipeline(query, memory)
+            last_err = ""
         except Exception as e:
-            err = str(e)
-            if "429" in err or "RESOURCE_EXHAUSTED" in err:
+            last_err = str(e)
+            if (
+                "429" in last_err
+                or "RESOURCE_EXHAUSTED" in last_err
+                or "503" in last_err
+                or "UNAVAILABLE" in last_err
+            ):
                 result = ""
             else:
                 print(f"\n  [error] {e}")
                 return None
 
         if result is None:
-            return None     # guardrail triggered — hard stop, no retry
+            return None     # guardrail triggered - hard stop, no retry
 
         if result:
             return result   # success
 
-        # Empty string — 429 swallowed by ADK background thread
+        # Empty string - rate limit or overload swallowed by ADK or propagated
+        is_503 = "503" in last_err or "UNAVAILABLE" in last_err
+        tag = "503" if is_503 else "429"
+        reason = "server overload" if is_503 else "rate limit"
         if attempt < _MAX_RETRIES:
+            wait = _retry_wait(last_err, attempt)
             print(
-                f"\n  [429] No response captured — waiting {_RETRY_WAIT}s "
-                f"before retry (attempt {attempt}/{_MAX_RETRIES})..."
+                f"\n  [{tag}] Gemini {reason} - waiting {wait}s "
+                f"(attempt {attempt}/{_MAX_RETRIES})..."
             )
-            time.sleep(_RETRY_WAIT)
-            print("  [429] Retrying.\n")
+            for remaining in range(wait, 0, -5):
+                print(f"  [{tag}] Retrying in {remaining}s...", end="\r")
+                time.sleep(min(5, remaining))
+            print(f"  [{tag}] Retrying now.{' ' * 20}\n")
         else:
             print(
-                f"\n  [429] Still no response after {_MAX_RETRIES} attempts. "
-                "Daily quota may be exhausted — try again tomorrow or enable billing."
+                f"\n  [{tag}] Still no response after {_MAX_RETRIES} attempts. "
+                + ("Try again in a few minutes." if is_503 else
+                   "Free-tier daily quota may be exhausted - try again tomorrow.")
             )
     return None

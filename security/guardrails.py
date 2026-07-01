@@ -14,7 +14,7 @@ GUARDRAIL_PHRASES: list[str] = [
 ]
 
 GUARDRAIL_MESSAGE: str = (
-    "⚠️  GUARDRAIL TRIGGERED: This agent provides analysis for educational "
+    "[!] GUARDRAIL TRIGGERED: This agent provides analysis for educational "
     "purposes only and is not licensed financial advice. It cannot recommend "
     "specific investment actions regarding your life savings."
 )
@@ -33,7 +33,7 @@ def check_input(user_input: str) -> str | None:
 
     Example:
         >>> check_input("Should I put my life savings into NVDA?")
-        '⚠️  GUARDRAIL TRIGGERED: ...'
+        '[!] GUARDRAIL TRIGGERED: ...'
         >>> check_input("What is the vibe on AAPL?") is None
         True
     """
